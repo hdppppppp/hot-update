@@ -1,0 +1,12 @@
+.gradle/
+build/
+**/build/
+.kotlin/
+local.properties
+*.iml
+.idea/
+.vscode/
+
+# Node SDK 构建产物
+hotupdate-node/node_modules/
+hotupdate-node/dist/

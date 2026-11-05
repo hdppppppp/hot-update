@@ -1,0 +1,7 @@
+jdk:
+  - openjdk21
+# JitPack 默认执行 `build publishToMavenLocal`。这里额外发布 includeBuild 的
+# 插桩插件（build-logic 是 composite build，不在根工程的模块列表里）。
+install:
+  - ./gradlew publishToMavenLocal -x test
+  - ./gradlew -p build-logic publishToMavenLocal -x test

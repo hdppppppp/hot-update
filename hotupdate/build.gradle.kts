@@ -20,7 +20,12 @@ plugins {
     // 三前缀 —— 本模块没有 data/player 类，实际命中的只有 update 包；
     // hotfix 运行时包由工厂的 isInstrumentable 永久排除，不会自插。
     id("com.taotao.hotfix")
+    // JitPack / mavenLocal 发布。依赖方加一行坐标即可接入。
+    `maven-publish`
 }
+
+group = "com.github.hdppppppp.hot-update"
+version = rootProject.file("VERSION").readText().trim()
 
 android {
     namespace = "com.taotao.music.hotupdate"
@@ -35,6 +40,12 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
+    }
+    publishing {
+        // 只发布 release AAR；同时带上源码包，便于依赖方调试。
+        singleVariant("release") {
+            withSourcesJar()
+        }
     }
 }
 
@@ -51,4 +62,26 @@ dependencies {
     // UpdateInstaller 经 androidx.core 的 FileProvider 唤起系统安装器。
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            register<MavenPublication>("release") {
+                from(components["release"])
+                artifactId = "hotupdate"
+                pom {
+                    name.set("hotupdate")
+                    description.set("Android 整包更新、远程配置与方法级 DEX 热修运行时")
+                    url.set("https://github.com/hdppppppp/hot-update")
+                    licenses {
+                        license {
+                            name.set("GPL-3.0")
+                            url.set("https://www.gnu.org/licenses/gpl-3.0.html")
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

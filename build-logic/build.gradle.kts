@@ -1,5 +1,32 @@
 plugins {
     `kotlin-dsl`
+    `maven-publish`
+}
+
+// 与根工程同一版本号；JitPack 以 tag 为版本，二者保持一致。
+group = "com.github.hdppppppp.hot-update"
+version = rootProject.file("../VERSION").readText().trim()
+
+afterEvaluate {
+    publishing {
+        publications {
+            // kotlin-dsl 自带 java-gradle-plugin，会在评估后生成 pluginMaven 发布项。
+            named<MavenPublication>("pluginMaven") {
+                artifactId = "hotfix-gradle-plugin"
+                pom {
+                    name.set("hotfix-gradle-plugin")
+                    description.set("com.taotao.hotfix 编译期插桩插件")
+                    url.set("https://github.com/hdppppppp/hot-update")
+                    licenses {
+                        license {
+                            name.set("GPL-3.0")
+                            url.set("https://www.gnu.org/licenses/gpl-3.0.html")
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 dependencies {

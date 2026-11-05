@@ -16,14 +16,28 @@ Android 方法级热修复 + 整包更新 / 灰度发布 / 远程配置的完整
 | `patch/` | 补丁模块示例：把补丁代码编译并打包成可下发的 `patch-<n>.apk` |
 | `HOT_UPDATE.md` | 设计文档：为什么选方法级分发、灰度/强制更新规则、安全边界 |
 
-## 快速开始
+## 快速开始（依赖接入）
 
-### Android 客户端
+### Android：只接整包更新 / 远程配置 / 补丁下发
+
+JitPack 直接从本仓库的 tag 构建，无需发布到 Maven Central：
 
 ```kotlin
 // settings.gradle.kts
-includeBuild("build-logic")   // 仅当需要给本模块插桩时
-include(":hotupdate")
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven("https://jitpack.io")
+    }
+}
+```
+
+```kotlin
+// app/build.gradle.kts
+dependencies {
+    implementation("com.github.hdppppppp.hot-update:hotupdate:v1.0.0")
+}
 ```
 
 ```kotlin
@@ -39,10 +53,57 @@ class MyApp : Application() {
 }
 ```
 
-完整接入步骤、`UpdateHost` 契约与非 Compose 客户端的 `StateFlow` 用法见
+`hotupdate` 依赖 Compose runtime 与 coroutines，宿主 `compileSdk` 需 37。
+`UpdateHost`、FileProvider、权限与非 Compose 的 `StateFlow` 用法见
 [`hotupdate/README.md`](hotupdate/README.md)。
 
+### Android：使用编译期插桩（热修宿主自己的代码）
+
+插桩插件同样从 JitPack 解析。Gradle 的插件标记不在 JitPack 的默认坐标下，
+用 `useModule` 指向插件 jar：
+
+```kotlin
+// settings.gradle.kts
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+        maven("https://jitpack.io")
+    }
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id == "com.taotao.hotfix") {
+                useModule("com.github.hdppppppp.hot-update:hotfix-gradle-plugin:v1.0.0")
+            }
+        }
+    }
+}
+```
+
+```kotlin
+// 宿主 app/build.gradle.kts
+plugins {
+    id("com.android.application")
+    id("com.taotao.hotfix")
+}
+
+hotfix {
+    // 默认白名单是桃桃的包名，接入方必须换成自己的可热修包。
+    includedPackages.set(listOf("com/example/app/data/"))
+}
+```
+
+再按 `autopatch` 的流程生成补丁，或用 `patch/` 示例打包。
+不需要插桩时，上面的插件与 `hotfix { }` 配置可以完全省略。
+
 ### Node 侧
+
+```powershell
+npm install https://github.com/hdppppppp/hot-update/releases/download/v1.0.0/taotao-hotupdate-node-1.0.0.tgz
+```
+
+或在本仓库直接运行：
 
 ```powershell
 cd hotupdate-node
@@ -53,11 +114,20 @@ npm start -- --port 4730 --token <管理令牌> --data ./data
 
 客户端/SDK/服务端的调用方式见 [`hotupdate-node/README.md`](hotupdate-node/README.md)。
 
+### 源码接入（可选）
+
+不想用 JitPack 时，把 `hotupdate/`（以及需要插桩时的 `build-logic/`）复制进项目，
+`settings.gradle.kts` 里 `include(":hotupdate")` / `includeBuild("build-logic")` 即可。
+
 ### 构建本仓库
 
 ```powershell
 # Android library
 .\gradlew.bat :hotupdate:assembleRelease
+
+# 发布到本地 Maven（用于联调）
+.\gradlew.bat publishToMavenLocal
+.\gradlew.bat -p build-logic publishToMavenLocal
 
 # 示例补丁（先确保 :hotupdate 已编译）
 .\gradlew.bat :patch:buildPatch -PpatchVersion=1
